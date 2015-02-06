@@ -2,51 +2,12 @@
 package main
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
-	"strings"
+
+    "github.com/AutoRoute/l2"
 )
-
-// These two interfaces represent the core abstractions in l2forward, with
-// almost everything working on PacketReaders. This is not implemented as a
-// io.Reader because you cannot arbitrarily slice up layer 2 ethernet packets
-// and expect things to keep working
-type PacketReader interface {
-	ReadPacket() ([]byte, error)
-}
-
-type PacketWriter interface {
-	WritePacket([]byte) error
-}
-
-// Basic utility function to take a string and turn it into a mac address. Will
-// die if the string is not valid.
-func MacToBytesOrDie(m string) []byte {
-	b, err := hex.DecodeString(strings.Replace(m, ":", "", -1))
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(b) != 6 {
-		log.Fatal("Expected mac of length 6 bytes got ", len(b))
-	}
-	return b
-}
-
-// Local equivalent of io.Copy, will shove packets from a PacketReader
-// into a PacketWriter
-func SendPackets(source PacketReader, destination PacketWriter) {
-	for {
-		p, err := source.ReadPacket()
-		if err != nil {
-			log.Fatal("Failure to read from source", source, err)
-		}
-		if destination.WritePacket(p) != nil {
-			log.Fatal("Failure to write to", destination, err)
-		}
-	}
-}
 
 func main() {
 	dev := flag.String("dev", "wlan0", "Device to create/attach to")
@@ -63,33 +24,33 @@ func main() {
 		log.Fatal("Cannot specify broadcast and connect")
 	}
 
-	macbyte := MacToBytesOrDie(*mac)
-	macbroad := MacToBytesOrDie("ff:ff:ff:ff:ff:ff")
+	macbyte := l2.MacToBytesOrDie(*mac)
+	macbroad := l2.MacToBytesOrDie("ff:ff:ff:ff:ff:ff")
 
 	if len(*broadcast) != 0 {
-		eth, err := ConnectEthDevice(*dev)
+		eth, err := l2.ConnectEthDevice(*dev)
 		if err != nil {
 			log.Fatal(err)
 		}
-		filtered_eth := NewFilterPacket(eth, macbroad, macbyte)
-		ln, err := NewListener(*broadcast)
+		filtered_eth := l2.NewFilterFrame(eth, macbroad, macbyte)
+		ln, err := l2.NewListener(*broadcast)
 		if err != nil {
 			log.Fatal(err)
 		}
-		go SendPackets(PacketLogger{ln}, eth)
-		go SendPackets(PacketLogger{filtered_eth}, ln)
+		go l2.SendFrames(l2.FrameLogger{ln}, eth)
+		go l2.SendFrames(l2.FrameLogger{filtered_eth}, ln)
 	} else {
-		tap, err := NewTapDevice(*mac, *dev)
+		tap, err := l2.NewTapDevice(*mac, *dev)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer tap.Close()
-		c, err := NewDialer(*connect)
+		c, err := l2.NewDialer(*connect)
 		if err != nil {
 			log.Fatal(err)
 		}
-		go SendPackets(PacketLogger{tap}, c)
-		go SendPackets(PacketLogger{c}, tap)
+		go l2.SendFrames(l2.FrameLogger{tap}, c)
+		go l2.SendFrames(l2.FrameLogger{c}, tap)
 	}
 	fmt.Scanln()
 }
