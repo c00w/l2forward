@@ -24,15 +24,21 @@ func main() {
 		log.Fatal("Cannot specify broadcast and connect")
 	}
 
-	macbyte := l2.MacToBytesOrDie(*mac)
-	macbroad := l2.MacToBytesOrDie("ff:ff:ff:ff:ff:ff")
+	macbyte, err := l2.MacToBytes(*mac)
+	if err != nil {
+		log.Fatal("Invalid mac address supplied", mac)
+	}
+	macbroad, err := l2.MacToBytes("ff:ff:ff:ff:ff:ff")
+	if err != nil {
+		panic(err)
+	}
 
 	if len(*broadcast) != 0 {
 		eth, err := l2.ConnectExistingDevice(*dev)
 		if err != nil {
 			log.Fatal(err)
 		}
-		filtered_eth := l2.NewFilterFrame(eth, macbroad, macbyte)
+		filtered_eth := l2.NewFilterReader(eth, macbroad, macbyte)
 		ln, err := l2.NewListener(*broadcast)
 		if err != nil {
 			log.Fatal(err)
