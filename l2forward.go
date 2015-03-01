@@ -58,8 +58,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		go l2.SendFrames(l2.FrameLogger{ln}, eth)
-		go l2.SendFrames(l2.FrameLogger{filtered_eth}, ln)
+		go l2.SendFrames(l2.NewLogger(ln), eth)
+		go l2.SendFrames(l2.NewLogger(filtered_eth), ln)
 	} else {
 		tap, err := l2.NewTapDevice(*mac, *dev)
 		if err != nil {
@@ -70,8 +70,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		go l2.SendFrames(l2.FrameLogger{tap}, c)
-		go l2.SendFrames(l2.FrameLogger{c}, tap)
+		go l2.SendFrames(l2.NewLogger(tap), c)
+		go l2.SendFrames(l2.NewLogger(c), tap)
 	}
 	fmt.Scanln()
 }
