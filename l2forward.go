@@ -5,9 +5,24 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 
 	"github.com/AutoRoute/l2"
 )
+
+func NewListener(address string) (l2.FrameReadWriter, error) {
+	ln, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	c, err := ln.Accept()
+	return l2.WrapReadWriter(c), err
+}
+
+func NewDialer(address string) (l2.FrameReadWriter, error) {
+	c, err := net.Dial("tcp", address)
+	return l2.WrapReadWriter(c), err
+}
 
 func main() {
 	dev := flag.String("dev", "wlan0", "Device to create/attach to")
@@ -38,8 +53,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		filtered_eth := l2.NewFilterReader(eth, macbroad, macbyte)
-		ln, err := l2.NewListener(*broadcast)
+		filtered_eth := l2.NewFilter(eth, macbroad, macbyte)
+		ln, err := NewListener(*broadcast)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -51,7 +66,7 @@ func main() {
 			log.Fatal(err)
 		}
 		defer tap.Close()
-		c, err := l2.NewDialer(*connect)
+		c, err := NewDialer(*connect)
 		if err != nil {
 			log.Fatal(err)
 		}
