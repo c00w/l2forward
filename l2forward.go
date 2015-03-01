@@ -28,7 +28,7 @@ func main() {
 	macbroad := l2.MacToBytesOrDie("ff:ff:ff:ff:ff:ff")
 
 	if len(*broadcast) != 0 {
-		eth, err := l2.ConnectEthDevice(*dev)
+		eth, err := l2.ConnectExistingDevice(*dev)
 		if err != nil {
 			log.Fatal(err)
 		}
